@@ -52,9 +52,14 @@ def adlo(download_folder, destination_folder):
         else:
             unsorted.append(f)
 
+    for f in subfiles:
+        if is_season(f):
+            handle_episode(f, episodes_folder)
+
     print('sorted',len(episodes))
     print('unsorted',len(unsorted))
     clean_empty_folders(download_folder)
+
     """
     info = guessit(fix_filename(f.name))
     if 'type' in info.keys():
