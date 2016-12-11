@@ -5,7 +5,7 @@ import platform
 import argparse
 import shutil
 import re
-
+allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts', 'rtf']
 
 def main():
     parser = argparse.ArgumentParser(description='Organize a folder containing TV shows')
@@ -29,7 +29,7 @@ def main():
 def adlo(download_folder, destination_folder):
 
     guessit_keys = ['type', 'title', 'season', 'episode', 'episode_title']
-    allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts']
+
 
     # Create Movies and Episodes folder one folder up from working directory
     movies_folder = destination_folder / 'Movies'
@@ -105,7 +105,7 @@ def handle_episode(path, episodes_folder):
     # do stuff
 
 def single_season(path, episodes_folder):
-    #TODO: clean_folder(path)
+    clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
     #print(str(path))
@@ -118,9 +118,27 @@ def single_season(path, episodes_folder):
     create_folders_in_path(target_folder)
     move_items_in_folder(path, target_folder)
 
+def clean_folder(path):
+    """ Recursively move through folders and delete files that are not allowed"""
+
+    if path.is_dir():
+        if re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
+            if platform.system() == 'Windows':
+                shutil.rmtree("\\\\?\\" + str(path))
+            else:
+                shutil.rmtree(str(path))
+        else:
+            for item in list(path.glob('./*')):
+                clean_folder(item)
+    else:
+        if not path.name.split('.')[-1].lower() in allowed_formats:
+            path.unlink()
+        elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
+            path.unlink()
+
 
 def multiple_seasons(path, episodes_folder):
-    #TODO: clean_folder(path)
+    clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
     target_folder = episodes_folder / (info['title'])
