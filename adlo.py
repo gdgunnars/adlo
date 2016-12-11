@@ -38,17 +38,23 @@ def adlo(download_folder, destination_folder):
     create_folders_in_path(episodes_folder)
 
     # Get list for all files under working directory
-    all_files = [x for x in list(download_folder.glob('**/*')) if x.is_file()]
-
+    subfiles = [x for x in list(download_folder.glob('./*')) if x.is_file()]
+    subfolders = [x for x in list(download_folder.glob('./*')) if x.is_dir()]
     unsorted = []
 
-    for f in all_files:
-        info = guessit(fix_filename(f.name))
-        if 'type' in info.keys():
-            if info['type'].lower() == 'episode':
-                handle_episode(info)
-            else:
-                unsorted.append(info)
+    for f in subfolders:
+        if is_season(f):
+            handle_episode(f)
+        else:
+            unsorted.append(f)
+
+    """
+    info = guessit(fix_filename(f.name))
+    if 'type' in info.keys():
+        if info['type'].lower() == 'episode':
+            handle_episode(info)
+        else:
+            unsorted.append(info)"""
 
 
 def handle_movie(info):
@@ -69,6 +75,17 @@ def handle_movie(info):
 def handle_episode(info):
     """ Sort episode."""
     # do stuff
+
+
+def is_season(path):
+    """ Return True if this folder or any subfolder contains 'Season' or 'SxxExx'. """
+    if re.search('[Ss]eason|[Ss]\d+[Ee]\d+', path.name):
+        return True
+    if path.is_dir():
+        for child in list(path.iterdir()):
+            if re.search('[Ss]eason|[Ss]\d+[Ee]\d+', child.name):
+                return True
+    return False
 
 
 def fix_filename(fname):
@@ -93,10 +110,10 @@ def create_folders_in_path(path):
 
 def create_path(path):
     """ Returns correct Path object regardless of absolute or relative path."""
-        if PurePath(path).is_absolute():
-            return Path(path)
-        else:
-            return Path().resolve() / path
+    if PurePath(path).is_absolute():
+        return Path(path)
+    else:
+        return Path().resolve() / path
 
 if __name__ == "__main__":
     main()
