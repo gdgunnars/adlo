@@ -107,7 +107,7 @@ def single_season(path, episodes_folder):
     #TODO: clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
-    print(str(path))
+    #print(str(path))
     if 'title' in info.keys():
         target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
     else:
@@ -131,16 +131,10 @@ def multiple_seasons(path, episodes_folder):
 def move_items_in_folder(folder, target):
     for item in list(folder.glob('./*')):
         if not (target / item.name).exists():
-            shutil.move(str(item).encode(encoding='utf-8'), str(target).encode(encoding='utf-8'))
+            shutil.move("\\\\?\\" + str(item), str(target))
         else:
-            print('------------------------------------------------------')
-            print('EXISTS:')
+            # Garbage
             print(str(item))
-            print(type(str(item)))
-            print(str(target))
-            print(type(str(target).encode(encoding='utf-8')))
-            print(target.is_dir())
-            print('------------------------------------------------------')
 
 def is_season(path):
     """ Recursively check if any file or folder contains info about season."""
