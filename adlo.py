@@ -1,6 +1,7 @@
 from guessit import guessit
 from pathlib import Path
 from pathlib import PurePath
+import platform
 import argparse
 import shutil
 import re
@@ -131,7 +132,10 @@ def multiple_seasons(path, episodes_folder):
 def move_items_in_folder(folder, target):
     for item in list(folder.glob('./*')):
         if not (target / item.name).exists():
-            shutil.move("\\\\?\\" + str(item), str(target))
+            if platform.system() == 'Windows':
+                shutil.move("\\\\?\\" + str(item), str(target))
+            else:
+                shutil.move(str(item), str(target))
         else:
             # Garbage
             print(str(item))
