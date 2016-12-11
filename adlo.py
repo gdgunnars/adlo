@@ -40,13 +40,15 @@ def adlo(download_folder, destination_folder):
     # Get list for all files under working directory
     all_files = [x for x in list(download_folder.glob('**/*')) if x.is_file()]
 
+    unsorted = []
+
     for f in all_files:
         info = guessit(fix_filename(f.name))
         if 'type' in info.keys():
-            if info['type'].lower() == 'movie':
-                handle_movie(info)
-            elif info['type'].lower() == 'episode':
+            if info['type'].lower() == 'episode':
                 handle_episode(info)
+            else:
+                unsorted.append(info)
 
 
 def handle_movie(info):
