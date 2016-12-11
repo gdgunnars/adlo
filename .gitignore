@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+# Project folders that we don't need in git
+Episodes/
+Movies/
