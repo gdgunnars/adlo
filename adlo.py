@@ -28,7 +28,7 @@ def main():
 def adlo(download_folder, destination_folder):
 
     guessit_keys = ['type', 'title', 'season', 'episode', 'episode_title']
-    allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv']
+    allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts']
 
     # Create Movies and Episodes folder one folder up from working directory
     movies_folder = destination_folder / 'Movies'
@@ -40,13 +40,19 @@ def adlo(download_folder, destination_folder):
     # Get list for all files under working directory
     subfiles = [x for x in list(download_folder.glob('./*')) if x.is_file()]
     subfolders = [x for x in list(download_folder.glob('./*')) if x.is_dir()]
+
     unsorted = []
+    episodes = []
 
     for f in subfolders:
         if is_season(f):
-            handle_episode(f)
+            episodes.append(f)
+            handle_episode(f, episodes_folder)
         else:
             unsorted.append(f)
+
+    print('sorted',len(episodes))
+    print('unsorted',len(unsorted))
 
     """
     info = guessit(fix_filename(f.name))
@@ -61,7 +67,7 @@ def handle_movie(info):
     """ Sort movie."""
     # TODO: Cross reference IMDB for title/alternative_title
     # TODO: Return unprocessed paths (not found in IMDB)
-
+"""
     if 'container' in info.keys() and info['container'].lower() in allowed_formats:
         if 'title' in info.keys() and 'alternative_title' in info.keys():
             copy_file(f, movies_folder / (info['title'] + " " + info['alternative_title']))
@@ -69,22 +75,97 @@ def handle_movie(info):
             copy_file(f, movies_folder / info['title'])
         else:
             print("don't know what the title is!")
-            #copy_file(f, movies_folder / f.parent.parts[-1])
+            #copy_file(f, movies_folder / f.parent.parts[-1])"""
 
 
-def handle_episode(info):
+def handle_episode(path, episodes_folder):
     """ Sort episode."""
+    info = guessit(fix_filename(path.name))
+
+    if foldername_has_single_season(path):
+        single_season(path, episodes_folder)
+
+    #elif foldername_has_multiple_seasons(path):
+    #    multiple_seasons(path)
+
+    else:
+        multiple_seasons(path, episodes_folder)
+
+    """
+    if foldername_has_single_season(child):
+        single_season(child)
+
+    elif foldername_has_multiple_seasons(child):
+        multiple_seasons(child)"""
+
+
+
+
     # do stuff
 
+def single_season(path, episodes_folder):
+    #TODO: clean_folder(path)
+    info = guessit(fix_filename(path.name))
+    # create Title folder and Season folder
+    print(str(path))
+    if 'title' in info.keys():
+        target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
+    else:
+        return
+        # TODO: read filenames for title/season
+
+    create_folders_in_path(target_folder)
+    move_items_in_folder(path, target_folder)
+
+
+def multiple_seasons(path, episodes_folder):
+    #TODO: clean_folder(path)
+    info = guessit(fix_filename(path.name))
+    # create Title folder and Season folder
+    target_folder = episodes_folder / (info['title'])
+
+    create_folders_in_path(target_folder)
+    move_items_in_folder(path, target_folder)
+
+
+def move_items_in_folder(folder, target):
+    for item in list(folder.glob('./*')):
+        if not (target / item.name).exists():
+            shutil.move(str(item).encode(encoding='utf-8'), str(target).encode(encoding='utf-8'))
+        else:
+            print('------------------------------------------------------')
+            print('EXISTS:')
+            print(str(item))
+            print(type(str(item)))
+            print(str(target))
+            print(type(str(target).encode(encoding='utf-8')))
+            print(target.is_dir())
+            print('------------------------------------------------------')
 
 def is_season(path):
-    """ Return True if this folder or any subfolder contains 'Season' or 'SxxExx'. """
-    if re.search('[Ss]eason|[Ss]\d+[Ee]\d+', path.name):
+    """ Recursively check if any file or folder contains info about season."""
+    if re.search('[Ss]eason|[Ss][ ]*\d+[ ]*[Ee][ ]*\d+', path.name):
         return True
-    if path.is_dir():
+    elif path.is_dir():
         for child in list(path.iterdir()):
-            if re.search('[Ss]eason|[Ss]\d+[Ee]\d+', child.name):
+            if is_season(child):
                 return True
+    return False
+
+
+def foldername_has_single_season(path):
+    if not re.search('\d+[ ]*-[ ]*\d+', path.name):
+        info = guessit(fix_filename(path.name))
+        if 'season' in info.keys():
+            return True
+    return False
+
+
+def foldername_has_multiple_seasons(path):
+    if re.search('\d+[ ]*-[ ]*\d+', path.name):
+        info = guessit(fix_filename(path.name))
+        if 'season' in info.keys():
+            return True
     return False
 
 
