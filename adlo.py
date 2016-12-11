@@ -54,7 +54,7 @@ def adlo(download_folder, destination_folder):
 
     print('sorted',len(episodes))
     print('unsorted',len(unsorted))
-
+    clean_empty_folders(download_folder)
     """
     info = guessit(fix_filename(f.name))
     if 'type' in info.keys():
@@ -135,6 +135,16 @@ def clean_folder(path):
             path.unlink()
         elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
             path.unlink()
+
+
+def clean_empty_folders(folder):
+    directoryList = list(folder.glob('./*'))
+    if not directoryList:
+        shutil.rmtree(str(folder))
+    else:
+        for item in directoryList:
+            if item.is_dir():
+                clean_empty_folders(item)
 
 
 def multiple_seasons(path, episodes_folder):
