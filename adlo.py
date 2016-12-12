@@ -5,6 +5,9 @@ import platform
 import argparse
 import shutil
 import re
+import time
+import progressbar
+
 allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts', 'rtf']
 unsorted = []
 sorted_episodes = []
@@ -19,20 +22,44 @@ def main():
                        help='Path to the directory you want your sorted files to be relocated')
     parser.add_argument('-l', metavar='--Log', dest='log',
                         help='Path to a location where you want to store unsorted items')
-    parser.add_argument('-m', metavar='--Movie', dest='sortMovies',
-                        action='store_const', const=handle_movies,
+    parser.add_argument('-m', action='store_true',
                         help='If this flag is set Movies will also be sorted out of the given directory')
     args = parser.parse_args()
 
     download_folder = create_path(args.dlFolder)
     destination_folder = create_path(args.destFolder)
 
+
     if not download_folder.exists():
         exit("The given download directory does not exists")
     if not destination_folder.exists():
         create_folders_in_path(destination_folder)
 
-    unsorted = adlo(download_folder, destination_folder)
+
+    print("Please wait while we start the sorting process")
+    i = 0
+    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    time.sleep(0.1)
+    bar.update(i)
+    unsorted = adlo(download_folder, destination_folder, args.m)
+    totalTime = len(unsorted)
+    newTime = 0
+    while sorted_episodes:
+        time.sleep(0.1)
+        elapsedTime = int((1-(newTime/totalTime))*100)
+        if elapsedTime == 100:
+            elapsedTime = 10
+        bar.update(elapsedTime)
+        i += 5
+        unsorted = adlo(download_folder, destination_folder, args.m)
+        newTime = len(unsorted)
+    bar.update(100)
+
+    print("\n---------------------------------------------")
+    print('sorted in last iteration:',len(sorted_episodes))
+    print('unsorted:',len(unsorted))
+    print('duplicates:',len(duplicates))
+
 
     if args.log:
         logPath = create_path(args.log)
@@ -40,10 +67,9 @@ def main():
             logPath.write_text("\n".join([str(x) for x in (['\t--Unsorted--\n']+unsorted+['\n\t--Duplicates--\n']+duplicates)]))
 
 
-def adlo(download_folder, destination_folder):
-
+def adlo(download_folder, destination_folder, sort_movies):
     guessit_keys = ['type', 'title', 'season', 'episode', 'episode_title']
-
+    clear_lists()
 
     # Create Movies and Episodes folder one folder up from working directory
     movies_folder = destination_folder / 'Movies'
@@ -66,15 +92,9 @@ def adlo(download_folder, destination_folder):
     for f in subfiles:
         process_single_file(f, episodes_folder)
 
-
-
-    handle_movies(movies_folder)
+    if sort_movies:
+        handle_movies(movies_folder)
     clean_empty_folders(download_folder)
-
-    print('sorted:',len(sorted_episodes))
-    print('unsorted:',len(unsorted))
-    print('duplicates:',len(duplicates))
-
 
     return unsorted
 
@@ -96,18 +116,6 @@ def handle_movies(movies_folder):
                 if not move_item(item, target_folder):
                     duplicates.append(item)
             unsorted.remove(item)
-
-
-
-"""
-    if 'container' in info.keys() and info['container'].lower() in allowed_formats:
-        if 'title' in info.keys() and 'alternative_title' in info.keys():
-            copy_file(f, movies_folder / (info['title'] + " " + info['alternative_title']))
-        elif 'title' in info.keys():
-            copy_file(f, movies_folder / info['title'])
-        else:
-            print("don't know what the title is!")
-            #copy_file(f, movies_folder / f.parent.parts[-1])"""
 
 
 def handle_episode(path, episodes_folder):
@@ -279,6 +287,12 @@ def create_path(path):
         return Path(path)
     else:
         return Path().resolve() / path
+
+
+def clear_lists():
+    sorted_episodes.clear()
+    unsorted.clear()
+    duplicates.clear()
 
 
 if __name__ == "__main__":
