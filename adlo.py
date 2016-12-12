@@ -194,37 +194,43 @@ def multiple_seasons(path, episodes_folder):
 
 def clean_folder(path):
     """ Recursively move through folders and delete files that are not allowed"""
-    if path.is_dir():
-        if re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
-            if platform.system() == 'Windows':
-                shutil.rmtree("\\\\?\\" + str(path))
+    try:
+        if path.is_dir():
+            if re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
+                if platform.system() == 'Windows':
+                    shutil.rmtree("\\\\?\\" + str(path))
+                else:
+                    shutil.rmtree(str(path))
             else:
-                shutil.rmtree(str(path))
-        else:
-            for item in list(path.glob('./*')):
-                clean_folder(item)
-    elif path not in failures:
-        try:
+                for item in list(path.glob('./*')):
+                    clean_folder(item)
+        elif path not in failures:
             if not path.name.split('.')[-1].lower() in allowed_formats:
                 path.unlink()
             elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
                 path.unlink()
-        except FileNotFoundError:
-            if path in unsorted:
-                unsorted.remove(path)
-            if path not in failures:
-                failures.append(path)
+    except FileNotFoundError:
+        if path in unsorted:
+            unsorted.remove(path)
+        if path not in failures:
+            failures.append(path)
 
 
 def clean_empty_folders(folder):
     """ Recursively remove empty folders."""
-    directoryList = list(folder.glob('./*'))
-    if not directoryList:
-        shutil.rmtree(str(folder))
-    else:
-        for item in directoryList:
-            if item.is_dir():
-                clean_empty_folders(item)
+    try:
+        directoryList = list(folder.glob('./*'))
+        if not directoryList:
+            shutil.rmtree(str(folder))
+        else:
+            for item in directoryList:
+                if item.is_dir():
+                    clean_empty_folders(item)
+    except FileNotFoundError:
+        if path in unsorted:
+            unsorted.remove(path)
+        if path not in failures:
+            failures.append(path)
 
 
 def move_items_in_folder(folder, target):
