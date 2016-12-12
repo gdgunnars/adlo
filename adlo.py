@@ -8,6 +8,7 @@ import re
 allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts', 'rtf']
 unsorted = []
 sorted_episodes = []
+duplicates = []
 
 
 def main():
@@ -18,6 +19,9 @@ def main():
                        help='Path to the directory you want your sorted files to be relocated')
     parser.add_argument('-l', metavar='--Log', dest='log',
                         help='Path to a location where you want to store unsorted items')
+    parser.add_argument('-m', metavar='--Movie', dest='sortMovies',
+                        action='store_const', const=handle_movies,
+                        help='If this flag is set Movies will also be sorted out of the given directory')
     args = parser.parse_args()
 
     download_folder = create_path(args.dlFolder)
@@ -29,10 +33,11 @@ def main():
         create_folders_in_path(destination_folder)
 
     unsorted = adlo(download_folder, destination_folder)
+
     if args.log:
         logPath = create_path(args.log)
         for i in unsorted:
-            logPath.write_text("\n".join([str(x) for x in unsorted]))
+            logPath.write_text("\n".join([str(x) for x in (['\t--Unsorted--\n']+unsorted+['\n\t--Duplicates--\n']+duplicates)]))
 
 
 def adlo(download_folder, destination_folder):
@@ -61,17 +66,41 @@ def adlo(download_folder, destination_folder):
     for f in subfiles:
         process_single_file(f, episodes_folder)
 
+
+
+    handle_movies(movies_folder)
+    clean_empty_folders(download_folder)
+    
     print('sorted:',len(sorted_episodes))
     print('unsorted:',len(unsorted))
-    clean_empty_folders(download_folder)
+    print('duplicates:',len(duplicates))
+
 
     return unsorted
 
 
-def handle_movie(info):
+def handle_movies(movies_folder):
     """ Sort movie."""
     # TODO: Cross reference IMDB for title/alternative_title
     # TODO: Return unprocessed paths (not found in IMDB)
+    for item in unsorted:
+        info = guessit(fix_filename(item.name))
+        if 'type' in info.keys() and info['type'].lower() == 'movie':
+            target_folder = movies_folder / (info['title'].title())
+            create_folders_in_path(target_folder)
+            if item.is_dir():
+                print("Directory: ", item)
+                clean_folder(item)
+                if not move_items_in_folder(item, target_folder):
+                    duplicates.append(item)
+            else:
+                print("File: ", item)
+                if not move_item(item, target_folder):
+                    duplicates.append(item)
+            unsorted.remove(item)
+
+
+
 """
     if 'container' in info.keys() and info['container'].lower() in allowed_formats:
         if 'title' in info.keys() and 'alternative_title' in info.keys():
@@ -125,7 +154,7 @@ def single_season(path, episodes_folder):
     if move_items_in_folder(path, target_folder):
         sorted_episodes.append(path)
     else:
-        unsorted.append(path)
+        duplicates.append(path)
 
 
 def clean_folder(path):
@@ -171,7 +200,7 @@ def multiple_seasons(path, episodes_folder):
     if move_items_in_folder(path, target_folder):
         sorted_episodes.append(path)
     else:
-        unsorted.append(path)
+        duplicates.append(path)
 
 
 def move_items_in_folder(folder, target):
