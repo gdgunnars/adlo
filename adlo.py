@@ -61,8 +61,8 @@ def adlo(download_folder, destination_folder):
     for f in subfiles:
         process_single_file(f, episodes_folder)
 
-    print('sorted',len(sorted_episodes))
-    print('unsorted',len(unsorted))
+    print('sorted:',len(sorted_episodes))
+    print('unsorted:',len(unsorted))
     clean_empty_folders(download_folder)
 
     return unsorted
