@@ -26,7 +26,7 @@ def main():
     parser.add_argument('-m', action='store_true',
                         help='If this flag is set Movies will also be sorted out of the given directory')
     parser.add_argument('--soft', action='store_false',
-                        help='If soft argument is give, the script will run only once through the directory')
+                        help='If soft argument is given, the script will run only once through the directory')
     args = parser.parse_args()
 
     download_folder = create_path(args.dlFolder)
@@ -53,7 +53,7 @@ def main():
         newTime = 0
         while sorted_episodes:
             elapsedTime = int((1-(newTime/totalTime))*100)
-            if elapsedTime == 100:
+            if elapsedTime > 100 or elapsedTime < 0:
                 elapsedTime = 10
             bar.update(elapsedTime)
             unsorted = adlo(download_folder, destination_folder, args.m)
@@ -203,17 +203,17 @@ def clean_folder(path):
         else:
             for item in list(path.glob('./*')):
                 clean_folder(item)
-    else:
+    elif path not in failures:
         try:
             if not path.name.split('.')[-1].lower() in allowed_formats:
                 path.unlink()
             elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
                 path.unlink()
         except FileNotFoundError:
-            print('The system cannot find the path specified:\n', str(path))
             if path in unsorted:
                 unsorted.remove(path)
-            failures.append(path)
+            if path not in failures:
+                failures.append(path)
 
 
 def clean_empty_folders(folder):
