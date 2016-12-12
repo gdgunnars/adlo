@@ -12,6 +12,7 @@ allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm'
 unsorted = []
 sorted_episodes = []
 duplicates = []
+failures = []
 
 
 def main():
@@ -55,20 +56,19 @@ def main():
         newTime = len(unsorted)
     bar.update(100)
 
-    print("\n---------------------------------------------")
-    print('sorted in last iteration:',len(sorted_episodes))
-    print('unsorted:',len(unsorted))
-    print('duplicates:',len(duplicates))
-
+    print_results()
 
     if args.log:
         logPath = create_path(args.log)
         for i in unsorted:
-            logPath.write_text("\n".join([str(x) for x in (['\t--Unsorted--\n']+unsorted+['\n\t--Duplicates--\n']+duplicates)]))
+            logPath.write_text("\n".join([str(x) for x in (['\t--Unsorted--\n']+unsorted+
+                                                           ['\n\t--Duplicates--\n']+duplicates+
+                                                           ['\n\t--Failures--\n']+failures)]))
 
 
 def adlo(download_folder, destination_folder, sort_movies):
-    guessit_keys = ['type', 'title', 'season', 'episode', 'episode_title']
+    """ Main function for script."""
+
     clear_lists()
 
     # Create Movies and Episodes folder one folder up from working directory
@@ -84,13 +84,14 @@ def adlo(download_folder, destination_folder, sort_movies):
 
 
     for f in subfolders:
-        if is_season(f):
+        if f not in failures and is_season(f):
             handle_episode(f, episodes_folder)
         else:
             unsorted.append(f)
 
     for f in subfiles:
-        process_single_file(f, episodes_folder)
+        if f not in failures:
+            process_single_file(f, episodes_folder)
 
     if sort_movies:
         handle_movies(movies_folder)
@@ -104,18 +105,22 @@ def handle_movies(movies_folder):
     # TODO: Cross reference IMDB for title/alternative_title
     # TODO: Return unprocessed paths (not found in IMDB)
     for item in unsorted:
-        info = guessit(fix_filename(item.name))
-        if 'type' in info.keys() and info['type'].lower() == 'movie':
-            target_folder = movies_folder / (info['title'].title())
-            create_folders_in_path(target_folder)
-            if item.is_dir():
-                clean_folder(item)
-                if not move_items_in_folder(item, target_folder):
-                    duplicates.append(item)
-            else:
-                if not move_item(item, target_folder):
-                    duplicates.append(item)
-            unsorted.remove(item)
+        if item not in failures:
+            info = guessit(fix_filename(item.name))
+            if 'type' in info.keys() and info['type'].lower() == 'movie':
+                if 'alternative_title' in info.keys():
+                    target_folder = movies_folder / (info['title'].title() + info['alternative_title'].title())
+                else:
+                    target_folder = movies_folder / (info['title'].title())
+                create_folders_in_path(target_folder)
+                if item.is_dir():
+                    clean_folder(item)
+                    if not move_items_in_folder(item, target_folder):
+                        duplicates.append(item)
+                else:
+                    if not move_item(item, target_folder):
+                        duplicates.append(item)
+                unsorted.remove(item)
 
 
 def handle_episode(path, episodes_folder):
@@ -129,6 +134,7 @@ def handle_episode(path, episodes_folder):
 
 
 def process_single_file(f, episodes_folder):
+    """ Sort a single file."""
     info = guessit(fix_filename(f.name))
     if 'title' in info.keys() and 'season' in info.keys():
         target_folder = episodes_folder / (info['title'].title() + "/Season " + str(info['season']))
@@ -145,6 +151,7 @@ def process_single_file(f, episodes_folder):
 
 
 def single_season(path, episodes_folder):
+    """ Sort folders that contain only one season."""
     clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
@@ -163,36 +170,8 @@ def single_season(path, episodes_folder):
         duplicates.append(path)
 
 
-def clean_folder(path):
-    """ Recursively move through folders and delete files that are not allowed"""
-
-    if path.is_dir():
-        if re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
-            if platform.system() == 'Windows':
-                shutil.rmtree("\\\\?\\" + str(path))
-            else:
-                shutil.rmtree(str(path))
-        else:
-            for item in list(path.glob('./*')):
-                clean_folder(item)
-    else:
-        if not path.name.split('.')[-1].lower() in allowed_formats:
-            path.unlink()
-        elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
-            path.unlink()
-
-
-def clean_empty_folders(folder):
-    directoryList = list(folder.glob('./*'))
-    if not directoryList:
-        shutil.rmtree(str(folder))
-    else:
-        for item in directoryList:
-            if item.is_dir():
-                clean_empty_folders(item)
-
-
 def multiple_seasons(path, episodes_folder):
+    """ Sort folders that contain multiple seasons."""
     clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
@@ -209,7 +188,43 @@ def multiple_seasons(path, episodes_folder):
         duplicates.append(path)
 
 
+def clean_folder(path):
+    """ Recursively move through folders and delete files that are not allowed"""
+    if path.is_dir():
+        if re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
+            if platform.system() == 'Windows':
+                shutil.rmtree("\\\\?\\" + str(path))
+            else:
+                shutil.rmtree(str(path))
+        else:
+            for item in list(path.glob('./*')):
+                clean_folder(item)
+    else:
+        try:
+            if not path.name.split('.')[-1].lower() in allowed_formats:
+                path.unlink()
+            elif re.search("[Ss][Cc][Rr][Ee][Ee][Nn]|[Ss][Aa][Mm][Pp][Ll][Ee]", path.name):
+                path.unlink()
+        except FileNotFoundError:
+            print('The system cannot find the path specified:\n', str(path))
+            if path in unsorted:
+                unsorted.remove(path)
+            failures.append(path)
+
+
+def clean_empty_folders(folder):
+    """ Recursively remove empty folders."""
+    directoryList = list(folder.glob('./*'))
+    if not directoryList:
+        shutil.rmtree(str(folder))
+    else:
+        for item in directoryList:
+            if item.is_dir():
+                clean_empty_folders(item)
+
+
 def move_items_in_folder(folder, target):
+    """ Move every item in folder to target folder."""
     for item in list(folder.glob('./*')):
         if not (target / item.name).exists():
             if platform.system() == 'Windows':
@@ -223,6 +238,7 @@ def move_items_in_folder(folder, target):
 
 
 def move_item(f, target):
+    """ Move f item to target folder."""
     if not (target / f.name).exists():
         if platform.system() == 'Windows':
             shutil.move("\\\\?\\" + str(f), str(target))
@@ -246,6 +262,7 @@ def is_season(path):
 
 
 def foldername_has_single_season(path):
+    """ Regex check if folder/filename contains a single season."""
     if not re.search('\d+[ ]*-[ ]*\d+', path.name):
         info = guessit(fix_filename(path.name))
         if 'season' in info.keys():
@@ -254,6 +271,7 @@ def foldername_has_single_season(path):
 
 
 def foldername_has_multiple_seasons(path):
+    """ Regex check if folder/filename contains multiple seasons."""
     if re.search('\d+[ ]*-[ ]*\d+', path.name):
         info = guessit(fix_filename(path.name))
         if 'season' in info.keys():
@@ -290,9 +308,19 @@ def create_path(path):
 
 
 def clear_lists():
+    """ Clears all the lists."""
     sorted_episodes.clear()
     unsorted.clear()
     duplicates.clear()
+
+
+def print_results():
+    """ Print program results."""
+    print("\n---------------------------------------------")
+    print('sorted in last iteration:',len(sorted_episodes))
+    print('unsorted:',len(unsorted))
+    print('duplicates:',len(duplicates))
+    print('failures:',len(failures))
 
 
 if __name__ == "__main__":
