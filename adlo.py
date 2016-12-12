@@ -53,7 +53,7 @@ def main():
         newTime = 0
         while sorted_episodes:
             elapsedTime = int((1-(newTime/totalTime))*100)
-            if elapsedTime > 100 or elapsedTime < 0:
+            if elapsedTime >= 100 or elapsedTime < 0:
                 elapsedTime = 10
             bar.update(elapsedTime)
             unsorted = adlo(download_folder, destination_folder, args.m)
