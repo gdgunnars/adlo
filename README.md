@@ -50,6 +50,7 @@ Running the script without any flags:
     sorted in last iteration: 0
     unsorted: 79
     duplicates: 4
+    failures: 0
 
 Running the script with flags:
 
@@ -60,8 +61,9 @@ Running the script with flags:
     sorted in last iteration: 0
     unsorted: 5
     duplicates: 4
+    failures: 0
 
 Known Issues
 -------
 
-Windows users might not be able able to sort files where the length of the path is more than 255 characters long. The script will output those paths to the log file (if specified) if that happens.
+Windows users might not be able to sort files where the length of the path is more than 255 characters long. The script will output those paths to the log file (if the -l flag is used) if that happens.
