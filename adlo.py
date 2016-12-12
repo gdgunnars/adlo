@@ -96,9 +96,9 @@ def handle_episode(path, episodes_folder):
 def process_single_file(f, episodes_folder):
     info = guessit(fix_filename(f.name))
     if 'title' in info.keys() and 'season' in info.keys():
-        target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
+        target_folder = episodes_folder / (info['title'].title() + "/Season " + str(info['season']))
     elif 'title' in info.keys():
-        target_folder = episodes_folder / (info['title'])
+        target_folder = episodes_folder / (info['title'].title())
     else:
         unsorted.append(f)
         return
@@ -115,7 +115,7 @@ def single_season(path, episodes_folder):
     # create Title folder and Season folder
     #print(str(path))
     if 'title' in info.keys():
-        target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
+        target_folder = episodes_folder / (info['title'].title() + "/Season " + str(info['season']))
     else:
         unsorted.append(path)
         return
@@ -162,7 +162,7 @@ def multiple_seasons(path, episodes_folder):
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
     if 'title' in info.keys():
-        target_folder = episodes_folder / (info['title'])
+        target_folder = episodes_folder / (info['title'].title())
     else:
         unsorted.append(path)
         return
