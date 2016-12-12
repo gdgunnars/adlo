@@ -6,6 +6,9 @@ import argparse
 import shutil
 import re
 allowed_formats = ['avi', 'srt', 'mkv', 'mp4', 'mpg', 'mov', 'mpeg', 'flv', 'rm', 'mpg2', 'mpeg-ts', 'mts', 'ts', 'rtf']
+unsorted = []
+sorted_episodes = []
+
 
 def main():
     parser = argparse.ArgumentParser(description='Organize a folder containing TV shows')
@@ -31,6 +34,7 @@ def main():
         for i in unsorted:
             logPath.write_text("\n".join([str(x) for x in unsorted]))
 
+
 def adlo(download_folder, destination_folder):
 
     guessit_keys = ['type', 'title', 'season', 'episode', 'episode_title']
@@ -47,21 +51,17 @@ def adlo(download_folder, destination_folder):
     subfiles = [x for x in list(download_folder.glob('./*')) if x.is_file()]
     subfolders = [x for x in list(download_folder.glob('./*')) if x.is_dir()]
 
-    unsorted = []
-    episodes = []
 
     for f in subfolders:
         if is_season(f):
-            episodes.append(f)
             handle_episode(f, episodes_folder)
         else:
             unsorted.append(f)
 
     for f in subfiles:
-        if is_season(f):
-            handle_episode(f, episodes_folder)
+        process_single_file(f, episodes_folder)
 
-    print('sorted',len(episodes))
+    print('sorted',len(sorted_episodes))
     print('unsorted',len(unsorted))
     clean_empty_folders(download_folder)
 
@@ -89,24 +89,25 @@ def handle_episode(path, episodes_folder):
 
     if foldername_has_single_season(path):
         single_season(path, episodes_folder)
-
-    #elif foldername_has_multiple_seasons(path):
-    #    multiple_seasons(path)
-
     else:
         multiple_seasons(path, episodes_folder)
 
-    """
-    if foldername_has_single_season(child):
-        single_season(child)
 
-    elif foldername_has_multiple_seasons(child):
-        multiple_seasons(child)"""
+def process_single_file(f, episodes_folder):
+    info = guessit(fix_filename(f.name))
+    if 'title' in info.keys() and 'season' in info.keys():
+        target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
+    elif 'title' in info.keys():
+        target_folder = episodes_folder / (info['title'])
+    else:
+        unsorted.append(f)
+        return
+    create_folders_in_path(target_folder)
+    if move_item(f, target_folder):
+        sorted_episodes.append(f)
+    else:
+        unsorted.append(f)
 
-
-
-
-    # do stuff
 
 def single_season(path, episodes_folder):
     clean_folder(path)
@@ -116,11 +117,16 @@ def single_season(path, episodes_folder):
     if 'title' in info.keys():
         target_folder = episodes_folder / (info['title'] + "/Season " + str(info['season']))
     else:
+        unsorted.append(path)
         return
         # TODO: read filenames for title/season
 
     create_folders_in_path(target_folder)
-    move_items_in_folder(path, target_folder)
+    if move_items_in_folder(path, target_folder):
+        sorted_episodes.append(path)
+    else:
+        unsorted.append(path)
+
 
 def clean_folder(path):
     """ Recursively move through folders and delete files that are not allowed"""
@@ -155,10 +161,17 @@ def multiple_seasons(path, episodes_folder):
     clean_folder(path)
     info = guessit(fix_filename(path.name))
     # create Title folder and Season folder
-    target_folder = episodes_folder / (info['title'])
+    if 'title' in info.keys():
+        target_folder = episodes_folder / (info['title'])
+    else:
+        unsorted.append(path)
+        return
 
     create_folders_in_path(target_folder)
-    move_items_in_folder(path, target_folder)
+    if move_items_in_folder(path, target_folder):
+        sorted_episodes.append(path)
+    else:
+        unsorted.append(path)
 
 
 def move_items_in_folder(folder, target):
@@ -168,9 +181,23 @@ def move_items_in_folder(folder, target):
                 shutil.move("\\\\?\\" + str(item), str(target))
             else:
                 shutil.move(str(item), str(target))
+            return True
         else:
             # Garbage
-            print(str(item))
+            return False
+
+
+def move_item(f, target):
+    if not (target / f.name).exists():
+        if platform.system() == 'Windows':
+            shutil.move("\\\\?\\" + str(f), str(target))
+        else:
+            shutil.move(str(f), str(target))
+        return True
+    else:
+        # Garbage
+        return False
+
 
 def is_season(path):
     """ Recursively check if any file or folder contains info about season."""
@@ -225,6 +252,7 @@ def create_path(path):
         return Path(path)
     else:
         return Path().resolve() / path
+
 
 if __name__ == "__main__":
     main()
