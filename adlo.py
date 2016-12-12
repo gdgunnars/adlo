@@ -25,6 +25,8 @@ def main():
                         help='Path to a location where you want to store unsorted items')
     parser.add_argument('-m', action='store_true',
                         help='If this flag is set Movies will also be sorted out of the given directory')
+    parser.add_argument('--soft', action='store_false',
+                        help='If soft argument is give, the script will run only once through the directory')
     args = parser.parse_args()
 
     download_folder = create_path(args.dlFolder)
@@ -38,22 +40,24 @@ def main():
 
 
     print("Please wait while we start the sorting process")
-    i = 0
-    bar = progressbar.ProgressBar(max_value=progressbar.UnknownLength)
+    bar = progressbar.ProgressBar(widgets=[
+        ' [', progressbar.Timer(), '] ',
+        progressbar.Bar(),
+        '  (', progressbar.ETA(), ') ',
+    ])
     time.sleep(0.1)
-    bar.update(i)
+    bar.update(2)
     unsorted = adlo(download_folder, destination_folder, args.m)
-    totalTime = len(unsorted)
-    newTime = 0
-    while sorted_episodes:
-        time.sleep(0.1)
-        elapsedTime = int((1-(newTime/totalTime))*100)
-        if elapsedTime == 100:
-            elapsedTime = 10
-        bar.update(elapsedTime)
-        i += 5
-        unsorted = adlo(download_folder, destination_folder, args.m)
-        newTime = len(unsorted)
+    if args.soft:
+        totalTime = len(unsorted)
+        newTime = 0
+        while sorted_episodes:
+            elapsedTime = int((1-(newTime/totalTime))*100)
+            if elapsedTime == 100:
+                elapsedTime = 10
+            bar.update(elapsedTime)
+            unsorted = adlo(download_folder, destination_folder, args.m)
+            newTime = len(unsorted)
     bar.update(100)
 
     print_results()
