@@ -64,4 +64,4 @@ Running the script with flags:
 Known Issues
 -------
 
-Windows users might not be able able sort files where the length of the path is more than 255 characters long. The script will output those paths if that happens.
+Windows users might not be able able to sort files where the length of the path is more than 255 characters long. The script will output those paths to the log file (if specified) if that happens.
