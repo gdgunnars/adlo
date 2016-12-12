@@ -70,7 +70,7 @@ def adlo(download_folder, destination_folder):
 
     handle_movies(movies_folder)
     clean_empty_folders(download_folder)
-    
+
     print('sorted:',len(sorted_episodes))
     print('unsorted:',len(unsorted))
     print('duplicates:',len(duplicates))
@@ -89,12 +89,10 @@ def handle_movies(movies_folder):
             target_folder = movies_folder / (info['title'].title())
             create_folders_in_path(target_folder)
             if item.is_dir():
-                print("Directory: ", item)
                 clean_folder(item)
                 if not move_items_in_folder(item, target_folder):
                     duplicates.append(item)
             else:
-                print("File: ", item)
                 if not move_item(item, target_folder):
                     duplicates.append(item)
             unsorted.remove(item)
