@@ -13,6 +13,8 @@ def main():
                        help='Path to download folder')
     parser.add_argument('destFolder',
                        help='Path to the directory you want your sorted files to be relocated')
+    parser.add_argument('-l', metavar='--Log', dest='log',
+                        help='Path to a location where you want to store unsorted items')
     args = parser.parse_args()
 
     download_folder = create_path(args.dlFolder)
@@ -23,8 +25,11 @@ def main():
     if not destination_folder.exists():
         create_folders_in_path(destination_folder)
 
-    adlo(download_folder, destination_folder)
-
+    unsorted = adlo(download_folder, destination_folder)
+    if args.log:
+        logPath = create_path(args.log)
+        for i in unsorted:
+            logPath.write_text("\n".join([str(x) for x in unsorted]))
 
 def adlo(download_folder, destination_folder):
 
@@ -60,13 +65,7 @@ def adlo(download_folder, destination_folder):
     print('unsorted',len(unsorted))
     clean_empty_folders(download_folder)
 
-    """
-    info = guessit(fix_filename(f.name))
-    if 'type' in info.keys():
-        if info['type'].lower() == 'episode':
-            handle_episode(info)
-        else:
-            unsorted.append(info)"""
+    return unsorted
 
 
 def handle_movie(info):
